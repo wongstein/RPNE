@@ -81,7 +81,9 @@ void setup() {
   myserial.print("C,0\r");          // Continuous mode for Atlas Scientific OFF
   delay(2000);
   pHRead(false);                         // One READ command to clear *ER output
+  delay(1000);
   pHRead(false);
+  delay(1000);
   pHRead(false);
 }
 
@@ -156,18 +158,21 @@ void loop(){
 void pHCal7() // All calibration functions will be very similar
 {
   myserial.print("Cal,mid,7.00\r");
+  delay(1000);
   pHRead(true);
 }
 
 void pHCal4() // All calibration functions will be very similar
 {
   myserial.print("Cal,low,4.00\r");
+  delay(1000);
   pHRead(true);
 }
 
 void pHCal10() // All calibration functions will be very similar
 {
   myserial.print("Cal,high,10.00\r");
+  delay(1000);
   pHRead(true);
 }
 
