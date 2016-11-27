@@ -80,7 +80,11 @@ void setup() {
   delay(1000);
   myserial.print("C,0\r");          // Continuous mode for Atlas Scientific OFF
   delay(2000);
-  pHRead();                         // One READ command to clear *ER output
+  pHRead(false);                         // One READ command to clear *ER output
+  delay(1000);
+  pHRead(false);
+  delay(1000);
+  pHRead(false);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +145,7 @@ void loop(){
       Serial.println("Cal 10");
       break;
     case 7:
-      pHRead();
+      pHRead(true);
       binout = 1;
       delay(calT);
       binin = 0;
@@ -154,30 +158,40 @@ void loop(){
 void pHCal7() // All calibration functions will be very similar
 {
   myserial.print("Cal,mid,7.00\r");
-  pHRead();
+  delay(1000);
+  pHRead(true);
 }
 
 void pHCal4() // All calibration functions will be very similar
 {
   myserial.print("Cal,low,4.00\r");
-  pHRead();
+  delay(1000);
+  pHRead(true);
 }
 
 void pHCal10() // All calibration functions will be very similar
 {
   myserial.print("Cal,high,10.00\r");
-  pHRead();
+  delay(1000);
+  pHRead(true);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void serialEvent() {                                  //if the hardware serial port_0 receives a char
-  inputstring = Serial.readStringUntil(13);                                   //read the string until we see a <CR>
+  inputstring = Serial.readStringUntil(13);           //read the string until we see a <CR>
   input_string_complete = true;                       //set the flag used to tell if we have received a completed string from the PC
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void pHRead() {                                     //here we go...
+void pHRead(boolean A) {                                     //here we go...
   myserial.print("R\r");    // Atlas amplifier only sends when requested with R
+
+  listenAS(A);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void listenAS(boolean A) {
   timeoutss = 0;
   while ((sensor_string_complete == false) && (timeoutss < 320000)) {
     if (myserial.available() > 0) {                     //if we see that the Atlas Scientific product has sent a character
@@ -187,7 +201,7 @@ void pHRead() {                                     //here we go...
         sensor_string_complete = true;                  //set the flag
       }
       else{
-        sensorstring += inchar;                               //add the char to the var called sensorstring
+        sensorstring += inchar;                         //add the char to the var called sensorstring
       }
     } 
     timeoutss = timeoutss + 1;
@@ -203,8 +217,18 @@ void pHRead() {                                     //here we go...
     inputstring = "";                                 //clear the string
     input_string_complete = false;                    //reset the flag used to tell if we have received a completed string from the PC
   }
+  
+  if(sensor_string_complete == true){
+    if(A==true){
+      recordData(sensorstring);
+    }
+    sensorstring = "";                                //clear the string
+    sensor_string_complete = false;                   //reset flag
+  }
+}
 
-  if (sensor_string_complete == true) {                     //if a string from the Atlas Scientific product has been received in its entirety
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void recordData(String A){
     dataFile=SD.open(fileName,FILE_WRITE);
 
     if(dataFile==false){
@@ -212,21 +236,13 @@ void pHRead() {                                     //here we go...
       initializeSD();
     }
     else{
-      Serial.print(sensorstring);                           //send that string to the PC's serial monitor
+      Serial.print(A);                           //send that string to the PC's serial monitor
       Serial.print(",");
-      dataFile.print(sensorstring);
+      dataFile.print(A);
       dataFile.print(",");
-      getTime();                                            //print out time to SD
+      getTime();                                //print out time to SD
       dataFile.close();
     }
-      sensorstring = "";                                    //clear the string
-      sensor_string_complete = false;                       //reset the flag used to tell if we have received a completed string from the Atlas Scientific product
-
-  }
-}
-////////////////////////////////////////////
-void listenAS() {
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
