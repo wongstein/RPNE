@@ -32,7 +32,7 @@ A0 A1 A2
 1  0  0   = pH 7 Calibration
 1  0  1   = pH 4 Calibration
 1  1  0   = pH 10 Calibration
-1  1  1   = pH Read and Datalog
+0  X  Y   = pH Read and Vial Positions
 
 */
 
@@ -339,11 +339,13 @@ void dunkProbe(bool A,bool B,bool C){
       endtime = millis();   // Updates the current 'time'
     }
   }
-  else{
-    
+  if (A == 1 && B == 1 && C==1){ //ph probe
+    masterSlaveWrite(0,Pos[0],Pos[1]);
+  } else {
+    masterSlaveWrite(A,B,C);
   }
-  //delay(1000*30);                                      // Delay to allow probe to equilibrate with surrounding media
-  masterSlaveWrite(A,B,C);                           
+  
+  //delay(1000*30);                                      // Delay to allow probe to equilibrate with surrounding media                            
   waitForSlave();                                   
   masterSlaveWrite(0,0,0);                          //Calling the function with arguments (0,0,0) will dunk without a delay
   delay(1000);                                    //Probe read time
