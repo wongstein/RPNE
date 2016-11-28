@@ -112,8 +112,8 @@ void loop(){
 
   binout = 0;             // Sets signal output to master to 0
   ms1 = digitalRead(A0);   // Reads master signal incoming on some pins
-  ms2 = digitalRead(A1);
-  ms3 = digitalRead(A2);
+  ms2 = analogRead(A1);
+  ms3 = analogRead(A2);
   
     
   intms = ms1*4+ms2*2+ms3;  // Base 10 representation of binary signal from master. ms1 is MSB, ms3 is LSB.

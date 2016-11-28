@@ -301,10 +301,10 @@ void calProbe(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sends set of signals to slave (111, 110, 101, or 100)
-void masterSlaveWrite(bool x,bool y,bool z){
+void masterSlaveWrite(bool x, int y, int z){
   digitalWrite(A0,x);
-  digitalWrite(A1,y);
-  digitalWrite(A2,z);  
+  analogWrite(A1,y);
+  analogWrite(A2,z);  
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -339,8 +339,11 @@ void dunkProbe(bool A,bool B,bool C){
       endtime = millis();   // Updates the current 'time'
     }
   }
-  if (A == 1 && B == 1 && C==1){ //ph probe
-    masterSlaveWrite(0,Pos[0],Pos[1]);
+  if (A == 1 && B == 1 && C==1){    //for yes read command, transform to give vial locations too
+    Serial.print("Here is the position we want to send");
+    Serial.print(Pos[0]);
+    Serial.print(Pos[1]);
+    masterSlaveWrite(0, Pos[0], Pos[1]);
   } else {
     masterSlaveWrite(A,B,C);
   }
