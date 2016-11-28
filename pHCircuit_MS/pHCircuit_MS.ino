@@ -10,7 +10,7 @@ A0 A1 A2
 1  0  0   = pH 7 Calibration
 1  0  1   = pH 4 Calibration
 1  1  0   = pH 10 Calibration
-1  1  1   = pH Read and Datalog
+0  X  Y   = Vial Position + pH Read and Datalog
 
 The Arduino will continuously monitor for inputs. 
 
@@ -53,6 +53,26 @@ int calT=1000;     // Calibration time constant - delay in
 int timeoutss = 0; // Timeout in pHRead
 long sigthreshold = 200;    // Threshold for consecutive readings to be considered a solid command from master
                             // Threshold of 200 is ~5ms of signal based on empirical timing tests
+int Pos[] = [null, null];  //current vial position
+
+/*
+PHYSICAL ARRAY LAYOUT ASSUMPTION
+
+ 
+  nY |     (1,nY)        (2,nY)     ...     (nX,nY)               Tub position = (1,0)
+     |                                                            Sponge position = (nX,0)
+  ...|      ...            ...      ...       ...
+     |
+  3  |  (1+xShift,1)  (2+xShift,1)  ...  (nX+xShift,1)
+     |
+  2  |      (1,2)         (2,2)     ...     (nX,2)
+     |
+  1  |  (1+xShift,1)  (2+xShift,1)  ...  (nX+xShift,1)
+     |
+  0  |      (1,0)         (2,0)     ...     (nX,0)
+      --------------------------------------------------
+              1     `       2       ...       nX
+*/
 
 File dataFile;      // File object for SD card
 
@@ -92,9 +112,10 @@ void loop(){
 
   binout = 0;             // Sets signal output to master to 0
   ms1 = digitalRead(A0);   // Reads master signal incoming on some pins
-  ms2 = digitalRead(A1);
-  ms3 = digitalRead(A2);
-
+  ms2 = analogRead(A1);
+  ms3 = analogRead(A2);
+  
+    
   intms = ms1*4+ms2*2+ms3;  // Base 10 representation of binary signal from master. ms1 is MSB, ms3 is LSB.
 
   // The below IF statement stack makes sure that there is a solid, meaningful signal from the master to
@@ -116,9 +137,9 @@ void loop(){
   else    // If no signal detected, set tempcount to 0
   {
     tempcount = 0;
-  }
-  
-  // If binin is 100=4, 101=5, 110=6, or 111=7, then perform calibrations or readings
+ }
+
+    // If binin is 100=4, 101=5, 110=6, or 0XY, then perform calibrations or readings
   switch (binin) {
     case 4:
       pHCal7();     // Calibration or reading function
@@ -144,15 +165,25 @@ void loop(){
       tempcount = 0;
       Serial.println("Cal 10");
       break;
-    case 7:
-      pHRead(true);
+    default: //here
+      //let's just make sure that the stuff coming in is still good
+      if(ms1 != 0 || ms2 == null || ms3 == null){
+        Serial.print("There is an error with slavemaster input @ A0, A1, A2, these are their values: ");
+        Serial.print(A0);
+        Serial.print(A1);
+        Serial.print(A2);
+        exit(1);                                                        //WILL BREAK BEFORE RECORDING!
+      } else {                                                               //update current vial position
+        Pos[0] = ms2;
+        Pos[1] = ms3;
+      }
+      pHRead();
       binout = 1;
       delay(calT);
       binin = 0;
       tempcount = 0;
       break;
   }
-
 }
 
 void pHCal7() // All calibration functions will be very similar
@@ -267,6 +298,13 @@ void getTime(){                                            //function to calcula
    Serial.println(dt.day); 
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void getVialPos(){
+  dataFile.print(",[");
+  dataFile.print(Pos[0]);
+  dataFile.print(Pos[1]);
+  dataFile.print("]");
+}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initializeSD(){                                        //initilize SD card, use so that if the SD catd is removed, 
   Serial.print("Initializing SD card...");                  //this function can be called to try and reinitialize the card
