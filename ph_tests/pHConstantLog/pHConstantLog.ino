@@ -45,6 +45,12 @@ unsigned long timeoutthresh = 1500;   // Milliseconds to wait for input from AS
 
 File dataFile;      // File object for SD card
 
+//vial start location variables
+int xPos = 3;
+int yPos = 0;
+int nX = 6; //limits
+int nY = 0; 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // setup Function
 // Arduino runs through this function once upon startup
@@ -149,6 +155,7 @@ void loop(){
       delay(calT);
       binin = 0;
       tempcount = 0;
+      changePos();
       break;
   }
 
@@ -233,7 +240,10 @@ void listenAS(boolean A) {
 // Records the input string into the SD card. If the file cannot be opened because 1) the SD card is absent, or 2) the SD
 // card was not initialized, this function will attempt to initialize the SD card.
 void recordData(String A){
-    dataFile=SD.open(fileName,FILE_WRITE);      // Opens the file
+    //turn to charArray for happiness
+    char temp[sizeof(fileName)];
+    fileName.toCharArray(temp, sizeof(temp));
+    dataFile=SD.open(temp, FILE_WRITE);      // Opens the file
 
     if(dataFile==false){
       Serial.println("error opening .txt file");
@@ -242,7 +252,8 @@ void recordData(String A){
     else{
       dataFile.print(A);                  // Print the string A
       dataFile.print(",");
-      recTime();                                // Print present time string to file
+      recTime();                           // Print present time string to file
+      recPos();      
       dataFile.close();                         // Closes the file
     }
 }
@@ -307,4 +318,21 @@ void createFileName(){                                      // Create a fileName
   }
   fileName += dt.minute;
   fileName += ".txt";
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void changePos(){
+  if (xPos > nX){ xPos = 3; }
+  else {xPos ++; }
+  
+  //no need to deal with yPos, it never changes
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void recPos(){
+  dataFile.print("\t");
+  dataFile.print(xPos);
+  dataFile.print(", ");
+  dataFile.println(yPos);
 }
