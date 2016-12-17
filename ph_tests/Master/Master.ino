@@ -1,3 +1,6 @@
+#include <SoftwareSerial.h>
+#define rx 2                                          // RX digital pin for AS communication
+#define tx 3 
 /*
 pH Automation Code
 RPNE Technologies
@@ -43,7 +46,7 @@ A0 A1 A2
 
 */
 const int numTrials = 5;               // Number of vials in array (before storing)
-
+SoftwareSerial myserial(rx, tx);
 
 
 //CNC and Sample Layout Constants
@@ -65,7 +68,7 @@ const int spd = 250;                  //Winding energization pause time (x and y
                                       //Value in microseconds, smaller values = faster motor speed
 const int zspd = 400;                 // Speed of z axis
 
-const int Z = 100;//13000;                      // Distance that probe moves up/down upon a reading
+const int Z = 13300;//13000;                      // Distance that probe moves up/down upon a reading
 
 boolean shifted = false;                //Parameter to check if x axis has been shifted
 
@@ -97,6 +100,9 @@ long swishtime = 1;//60000;   // Swishes probe tip around for this many ms
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
+  Serial.begin(9600);                                 //set baud rate for the hardware serial port_0 to 9600, debugging
+  myserial.begin(9600);                               //set baud rate for the software serial port to 9600
+  
   // Serial.begin(9600);
   pinMode(8,OUTPUT);                    //'Enable' for motors at 'low' on pin 8
   digitalWrite(8,LOW);
@@ -123,8 +129,9 @@ void setup() {
   digitalWrite(zp, LOW);                   
   digitalWrite(zpd, LOW);
   findLimits();                         //Return probe to the origin
-
+  myserial.print("Calibrating");
   test_7_4_10(true);    //Calibrates probe at 4 and 7
+  myserial.print("first test");
   test_7_4_10(false);
 }
 
@@ -383,13 +390,10 @@ void moveZ(int i, int p){                //Sends command to gshield to move Z ax
 // length of time
 void waitForSlave(){                                
 delay(rt);
-
-/*  
   delay(500);
   while(digitalRead(A3) = 0){
     delay(500);
   }
-*/
 }
 
 
@@ -404,23 +408,30 @@ void washProbe(){                                   //Function washes and dries 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //Calibration of probe to a pH of 7, then 4, then 10. The probe is washed and dried after every calibration.
 //calibration: true if this is a calibration, false if this is a final reading
-void test_7_4_10(boolean calibration){                                    
-  washProbe();
+void test_7_4_10(boolean calibration){   
+  if(calibration == true){
+     washProbe();
+  };  
   moveTo(xCal7,yCal7);
   if(calibration == true){dunkProbe(1,0,0); }
   else{dunkProbe(1,1,1); };
           // Cal 7 = 100 to slave
  
-  washProbe();
+  if(calibration == true){
+     washProbe();
+  };  
   moveTo(xCal4,yCal4);
   if(calibration == true){dunkProbe(1,0,1); }
   else{dunkProbe(1,1,1); };
            // Cal 4 = 101
   
-  washProbe();
+  if(calibration == true){
+     washProbe();
+  };  
   //buffer 10
   moveTo(xCal10,yCal10);
   if(calibration == true){dunkProbe(1,1,0); }
   else{dunkProbe(1,1,1); };
 }
+
 
