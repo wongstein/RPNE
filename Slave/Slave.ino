@@ -66,8 +66,8 @@ unsigned long timeoutthresh = 1500;                   // Milliseconds to wait fo
 
 const int strLoop = 6;                                // Flag to signal master to start loop
 const int tpd = 4;                                    // Number of reading per day
-const int hr[tpd] = {9};                     // Loop run starting hours
-const int mi[1] = {20};                               // Loop run starting minute
+const int hr[tpd] = {15};                     // Loop run starting hours, also in military time
+const int mi[1] = {33};                               // Loop run starting minute
 
 File dataFile;                                        // File object for SD card
 
@@ -107,13 +107,19 @@ void setup(){
   listenAS(false);
   listenAS(false);
   listenAS(false);
-}
-
+ 
+  Serial.print("This is the current time for the clock: ");
+  Serial.print(dt.hour);
+  Serial.print(": ");
+  Serial.print(dt.minute);
+  Serial.print(": ");
+  Serial.println(dt.second);
+ }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // loop Function
 // This is the main function that the Arduino will loop through forever after setup.
 void loop(){
-  
+ 
   binout = 0;                                         // Sets signal output to master to 0
   ms1 = digitalRead(A0);                              // Reads master signal incoming on some pins
   ms2 = digitalRead(A1);
@@ -143,14 +149,13 @@ void loop(){
   switch (binin){
     case 1: //solo for checking time
       if(checkTime() == true){
-        
-        Serial.print("it's now time to turn on master!");
         digitalWrite(strLoop,HIGH);
         delay(2500);
         digitalWrite(strLoop,LOW);
       }
       xPos = 1;                                       // reset X & Y positions
       yPos = 1;
+      binin = 0;
       break;
     case 4:
       pHCal7();                                       // Calibration or reading function
@@ -185,7 +190,8 @@ void loop(){
       changePos();
       break;
   }
-}
+ 
+} 
 
 void pHCal7(){                                        // Calibrates to 7 pH
   myserial.print("Cal,mid,7.00\r");
@@ -260,11 +266,16 @@ void listenAS(boolean A){
 }
 
 boolean checkTime(){
+  dt=clock.getDateTime();
+
+  //checks the times always
   for(int i=0; i < tpd; i++){
     if(dt.hour == hr[i]){
-      if(dt.minute >= mi[0]){ //make this great than or equal to catch case when time passed but arduino was too sleepy
+      if(dt.minute >= mi[0] && dt.minute < (mi[0] + 5)){
+       Serial.println("It is time, in CheckTime()"); //make this great than or equal to catch case when time passed but arduino was too sleepy
         return true;
       }
+      
       return false;
     }
     return false;  
@@ -276,7 +287,10 @@ boolean checkTime(){
 // Records the input string into the SD card. If the file cannot be opened because 1) the SD card is absent, or 2) the SD
 // card was not initialized, this function will attempt to initialize the SD card.
 void recordData(String A){
-    dataFile=SD.open(fileName,FILE_WRITE);            // Opens the file
+  //turn to charArray for happiness
+    char temp[sizeof(fileName)];
+    fileName.toCharArray(temp, sizeof(temp));
+    dataFile=SD.open(temp, FILE_WRITE);
 
     if(dataFile==false){
       Serial.println("error opening .txt file");
