@@ -141,7 +141,8 @@ void loop() {
       nextSample();                                   // Get Position of the next sample
    }
    
-
+  //final test of buffers to see the drift in readings
+  test_7_4_10();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -462,8 +463,31 @@ void calProbe(){
   moveTo(xCal4,yCal4);
   dunkProbe(1,0,1);         // Cal 4 = 101
   
+  /**
   washProbe();
   moveTo(xCal10,yCal10);
   dunkProbe(1,1,0);         // Cal 10 = 110
+  **/
   
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//Calibration of probe to a pH of 7, then 4, then 10. The probe is washed and dried after every calibration.
+//calibration: true if this is a calibration, false if this is a final reading
+void test_7_4_10(){   
+  washProbe();
+  moveTo(xCal7,yCal7);
+  dunkProbe(1,1,1);         // Cal 7 = 100 to slave
+ 
+  washProbe();
+  moveTo(xCal4,yCal4);
+  dunkProbe(1,1,1);         // Cal 4 = 101
+  
+  
+  washProbe();
+  moveTo(xCal10,yCal10);
+  dunkProbe(1,1,1);         // Cal 10 = 110
+ 
+}
+
