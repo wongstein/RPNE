@@ -156,12 +156,6 @@ void setup(){
   listenAS(false);
   listenAS(false);
  
-  Serial.print("This is the current time for the clock: ");
-  Serial.print(dt.hour);
-  Serial.print(": ");
-  Serial.print(dt.minute);
-  Serial.print(": ");
-  Serial.println(dt.second);
  }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // loop Function
@@ -193,13 +187,6 @@ void loop(){
     tempcount = 0;
   }
   
-  if (tempcount % 10 == 1)
-  {
-    Serial.print("This is intms: ");
-    Serial.println(intms);
-    Serial.println(binin);
-    Serial.println(tempcount);
-  }
   // If binin is 001 =1, 100=4, 101=5, 110=6, or 111=7, then perform calibrations or readings
   switch (binin){
     
@@ -208,7 +195,7 @@ void loop(){
         digitalWrite(strLoop,HIGH);
         delay(2500);
         digitalWrite(strLoop,LOW);
-      }
+      } else { digitalWrite(strLoop,LOW); };
       xPos = 1;                                       // reset X & Y positions
       yPos = 1;
       tempcount = 0;
@@ -229,14 +216,6 @@ void loop(){
       binin = 0;
       tempcount = 0;
       Serial.println("Cal 4");
-      break;
-    case 6:
-      pHCal10();
-      binout = 1;
-      delay(calT);
-      binin = 0;
-      tempcount = 0;
-      Serial.println("Cal 10");
       break;
     case 7:
       Serial.println("I'm in case 7");
@@ -259,11 +238,6 @@ void pHCal7(){                                        // Calibrates to 7 pH
 
 void pHCal4(){                                        // Calibrates to 4 pH
   myserial.print("Cal,low,4.00\r");
-  delay(1000);
-}
-
-void pHCal10(){                                       // Calibrates to 10 pH
-  myserial.print("Cal,high,10.00\r");
   delay(1000);
 }
 
@@ -316,7 +290,7 @@ void listenAS(boolean A){
     Serial.print(sensorstring);                       // send that string to the PC's serial monitor
     Serial.print(",");
     if(A==true){
-      Serial.print("Recording data!");
+      Serial.print("Recording data!");  //test
       recordData(sensorstring);
     }
     Serial.print('\n');
@@ -328,20 +302,11 @@ void listenAS(boolean A){
 //
 boolean checkTime(){
   dt=clock.getDateTime();
-  Serial.print(dt.hour);
-  Serial.print("_");
-  Serial.print(dt.minute);
-  Serial.print("_");
-  Serial.println(dt.second);
   //checks the times always
   for(int i=0; i < tpd; i++) {
-    Serial.println("here's what we are looking for");
-    Serial.print(hr[i]);
-    Serial.print(" : ");
-    Serial.print(mi[i]);
     //(dt.hour == hr[i] && dt.minute == mi[i]){
       if(dt.hour == hr[i] && (dt.minute >= mi[i] && dt.minute < (mi[i] + 1))){
-          Serial.println("IN MINUTE LOOP ****************************************************************************************");
+          Serial.println("IN MINUTE LOOP*");
           return true;
     }
   }
