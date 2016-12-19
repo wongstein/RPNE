@@ -1,7 +1,7 @@
 
 
 /* USER INTERFACE **************************************************************************/
-const int numVials = 3;                           
+const int numVials = 1;                           
 /*********************************************************************************************/
 
 
@@ -140,10 +140,13 @@ void setup(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-   storeProbe();                                    // Stores probe between cycles (arg of 1 = 1 sec of storage)
+   Serial.println("Restarted the loop");
+   storeProbe();      // Stores probe between cycles (arg of 1 = 1 sec of storage)
+   Serial.println("Done with storeProbe");
    findLimits(); 
-   calProbe();                                         // Calibrates probe
+   //calProbe();                                         // Calibrates probe
    for(int c=0; c < numVials; c++){
+     Serial.println("Now testing all the vials");
       washProbe();                                                                                                                           
       moveTo(xDes,yDes);                              // Move to current sample
       dunkProbe(1,1,1);                               // Dunk probe and take reading              //or do something like in lines 166-168
@@ -151,7 +154,7 @@ void loop() {
    }
    
   //final test of buffers to see the drift in readings
-  test_7_4_10();
+  test_7_4();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -189,12 +192,15 @@ void storeProbe(){                                    // Function stores the pro
   masterSlaveWrite(0,0,1);                            // Tells slave to track time
   int sl_flag = 0;                    // Keeps track of input from slave
   while(sl_flag == 0){              //waiting for time input from slave
-    SlPinRead = digitalRead(startLoop);          // Read input from slave
+    SlPinRead = digitalRead(startLoop);          // Read input from slave //It is 1
+    Serial.print("this is SiPinRead: ");
+    Serial.println(SlPinRead);
     if (SlPinRead == 1)                                     // If there is some non-zero signal from the master, enter stack
     {
       long int startSLin = millis();                      // Set 'start' time of signal
       while(digitalRead(startLoop) == 1){
         if ((millis() - startSLin > SL_THRESH) || (millis() - startSLin < 0)){      // Make sure time threshold is met for 'high' input
+          Serial.println("We've reached threshold!!");
           sl_flag = 1;                      // Received high input from slave
           masterSlaveWrite(0,0,0);      // Tells slave to be on standby again
           break;
@@ -484,7 +490,7 @@ void calProbe(){
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //Calibration of probe to a pH of 7, then 4, then 10. The probe is washed and dried after every calibration.
 //calibration: true if this is a calibration, false if this is a final reading
-void test_7_4_10(){   
+void test_7_4(){   
   washProbe();
   moveTo(xCal7,yCal7);
   dunkProbe(1,1,1);         // Cal 7 = 100 to slave

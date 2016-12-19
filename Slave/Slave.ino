@@ -4,7 +4,7 @@
 
 /* USER INTERFACE **************************************************************************/
 //Total number of vials being tested this time.  Make sure you updated the master code too!
-int numVials = 3;
+int numVials = 1;
 
 //The total number of times you want to run trials in a day
 const int tpd = 4;
@@ -43,8 +43,8 @@ START_TIME = SOME_TIME - (homing + calibration + num_vials/2 * (reading_times + 
 /*********************************************************************************************/
 
 //JUST FOR TESTING!!!
-const int hr[3] = {18, 18, 19};                     
-const int mi[3] = {20, 56, 00};
+const int hr[3] = {20, 20, 21};                     
+const int mi[3] = {50, 52, 14};
 
 /*
 pH Automation Code
@@ -88,9 +88,9 @@ const int chipSelect = 4;                             // ChipSelect for the SD c
 
 String inputstring = "";                              // String to hold incoming data from the PC
 String sensorstring = "";                             // String to hold the data from the Atlas Scientific product
+String fileName = "";
 boolean input_string_complete = false;                // Have we received all the data from a connected PC?
 boolean sensor_string_complete = false;               // Have we received all the data from the Atlas Scientific?
-String fileName="";                                   // Used for the naming of the date file
 
 int ms1 = 0;                                          // State of MASTER 1 PIN
 int ms2 = 0;                                          // State of MASTER 2 PIN
@@ -118,7 +118,7 @@ File dataFile;                                        // File object for SD card
 
 //track the number of vials
 int counter_vials = 0;
-
+boolean finished = 0;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // setup Function
 // Arduino runs through this function once upon startup
@@ -139,10 +139,10 @@ void setup(){
 
   pinMode(strLoop,OUTPUT);                            // To send signal to master
   digitalWrite(strLoop,LOW);
-  
+  fileName = createFileName();
   initializeSD();                                     // Initializes SD card
-
-  createFileName();                                   // Determines file name and creates file if not existing
+  
+                                    // Determines file name and creates file if not existing
 
   pHRead(false);                                      // One command to clear *ER output
   myserial.print("RESPONSE,0\r");                     // Responses (like *OK) are turned OFF from Atlas Scientific
@@ -150,7 +150,7 @@ void setup(){
   myserial.print("C,0\r");                            // Continuous mode for Atlas Scientific OFF
   delay(1500);                      
   
-  pHRead(false);                        
+  pHRead(false);                  
   // To make sure the Atlas Scientific buffer is clear, we run through a 'listen' function a few times
   listenAS(false);
   listenAS(false);
@@ -200,6 +200,8 @@ void loop(){
       yPos = 1;
       tempcount = 0;
       binin = 0;
+      counter_vials = 0;
+      finished = false;
       break;
     case 4:
       pHCal7();                                       // Calibration or reading function
@@ -218,14 +220,12 @@ void loop(){
       Serial.println("Cal 4");
       break;
     case 7:
-      Serial.println("I'm in case 7");
       pHRead(true);
       binout = 1;
       delay(calT);
       binin = 0;
       tempcount = 0;
       changePos();
-      counter_vials += 1;
       break;
   }
  
@@ -253,6 +253,7 @@ void serialEvent(){                                   // if the hardware serial 
 void pHRead(boolean A){                                     
   myserial.print("R\r");                              // AS only reads when requested with R
   listenAS(A);
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -305,10 +306,15 @@ boolean checkTime(){
   //checks the times always
   for(int i=0; i < tpd; i++) {
     //(dt.hour == hr[i] && dt.minute == mi[i]){
-      if(dt.hour == hr[i] && (dt.minute >= mi[i] && dt.minute < (mi[i] + 1))){
-          Serial.println("IN MINUTE LOOP*");
+      //if(1){
+     if( (dt.hour == hr[i])
+        && (  (dt.minute >= mi[i]) 
+            && (dt.minute < (mi[i] + 1))
+            )
+         ){
+          Serial.println("it's time");
           return true;
-    }
+    } else {Serial.print(" not time "); }
   }
     
   return false;
@@ -320,8 +326,10 @@ boolean checkTime(){
 // card was not initialized, this function will attempt to initialize the SD card.
 void recordData(String A){
   //turn to charArray for happiness
-    char temp[sizeof(fileName)];
-    fileName.toCharArray(temp, sizeof(temp));
+    char temp[13];
+    
+    fileName.toCharArray(temp, 13);
+    Serial.println(temp);
     dataFile=SD.open(temp, FILE_WRITE);
 
     if(dataFile==false){
@@ -367,57 +375,55 @@ void recTime(){                                       // function to calculate t
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initializeSD(){                                  // Initialize SD card 
-  Serial.print("Initializing SD card...");            // This function can be called to try and reinitialize the card
-  
   if (!SD.begin(chipSelect)) {                        // See if the card is present and can be initialized
-    Serial.println("Card failed, or not present");
+    Serial.println("Card failed");
     return;
   }
-  Serial.println("Card initialized.");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void createFileName(){                                // Create a fileName for the .txt file
+String createFileName(){ 
+ // Create a fileName for the .txt file
+  String this_string = "";
   dt=clock.getDateTime();
   
   if(dt.month<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.month;
+  this_string += dt.month;
   if(dt.day<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.day;
+  this_string += dt.day;
   if(dt.hour<10){
-    fileName +="0";
+    this_string +="0";
   }
   fileName += dt.hour;
   if(dt.minute<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.minute;
-  fileName += ".txt";
+  
+  this_string += dt.minute;
+  this_string += ".txt";
+
+  return this_string;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void changePos(){
-  if (counter_vials >= numVials){
+  counter_vials += 1;
+  
+  if (counter_vials >= numVials && finished == false){
     xPos = 3;
     yPos = 0;
     counter_vials = 0;
-  }
-  if (xPos == nX){                          
-    xPos = 1;
-    if (yPos == nY){
-      yPos = 1;
-    }
-    else{
-      yPos++;
-    }
-  }
-  else{
-    xPos++;
-  }
+    finished = true;
+  } else if (xPos == nX){
+    Serial.println("this is counter_vials");
+    Serial.print(counter_vials);
+    {xPos = 1;}
+    //if (yPos == nY){yPos = 1;} else {yPos += 1;}
+  } else { xPos += 1;};
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
