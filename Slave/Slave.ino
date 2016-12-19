@@ -398,7 +398,7 @@ String createFileName(){
   if(dt.hour<10){
     this_string +="0";
   }
-  fileName += dt.hour;
+  this_string += dt.hour;
   if(dt.minute<10){
     this_string +="0";
   }
