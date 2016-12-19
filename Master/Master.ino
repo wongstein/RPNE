@@ -1,3 +1,10 @@
+
+
+/* USER INTERFACE **************************************************************************/
+const int numVials = 3;                           
+/*********************************************************************************************/
+
+
 /*
 pH Automation Code
 RPNE Technologies
@@ -55,7 +62,7 @@ int Y = xyRes*yDis;                                   // Number of steps between
 
 const int nX = 7;                                     // Number of vials in the X direction
 const int nY = 3;                                     // Number of vials in the Y direction
-const int numVials = 3;                               // Number of vials in array (before storing)
+
 int count = 0;                                        // Counter to keep track of the number of vials
 
 const int db = 10;                                    // Limit switch debounce constant  
@@ -64,7 +71,8 @@ const int spd = 250;                                  // Winding energization pa
                                                       // Value in microseconds, smaller values = faster motor speed
 const int zspd = 400;                                 // Speed of z axis
 
-const int Z = 13900;                                  // Distance that probe moves up/down upon a reading
+//const int Z = 13900;                                  // Distance that probe moves up/down upon a reading
+const int Z = 3; //TEST
 
 boolean shifted = false;                              // Parameter to check if x axis has been shifted
 
@@ -80,8 +88,9 @@ const int xStrg = 7; const int yStrg = 0;             // Position of storage sol
 int Pos[] = {xPos, yPos};
 int startTime = 0;                                    // Keeps track of start and end times of the z-axis 'swish' loop
 int currentTime = 0;
-long swishtime = 60000;                               // Swishes probe tip around for this many ms
-  
+//long swishtime = 60000;                               // Swishes probe tip around for this many ms
+long swishtime = 1; //TEST
+
 // CONSTANTS AS PER WIRING ON BOARDS, DO NOT CHANGE
  const int xp = 2;                                    // X position pin #
  const int yp = 3;                                    // Y position pin #
@@ -483,11 +492,9 @@ void test_7_4_10(){
   washProbe();
   moveTo(xCal4,yCal4);
   dunkProbe(1,1,1);         // Cal 4 = 101
-  
-  
-  washProbe();
-  moveTo(xCal10,yCal10);
-  dunkProbe(1,1,1);         // Cal 10 = 110
  
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//Calculate average gime 
 

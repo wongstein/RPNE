@@ -1,3 +1,51 @@
+
+
+
+
+/* USER INTERFACE **************************************************************************/
+//Total number of vials being tested this time.  Make sure you updated the master code too!
+int numVials = 3;
+
+//The total number of times you want to run trials in a day
+const int tpd = 4;
+
+//YOu can enter here up to four different times to check in a day.
+//These times should track with the middle time of measurement, 
+//aka: if you put in midnight, then the program will make sure that the machine finishes measuring half the vials by the time inputted.
+
+//hr is the hours of the time in military time
+//mi is the minutes and track with the array positions on hr.
+
+//For example: if you want to run a trial at midnight, then you could set hr[0] = 0, and match mi[0] = 0
+//However, if you were intending to check at midnight, and set hr[0] = 0 but mi[1] = 0 instead of mi[0],
+//then the program will not reliably measure at midnight
+
+//In this example, the times for measurement would be read as : 0:00, 6:05, 12:10,  20:30
+
+
+/*
+If you want to calculate the times based on when you would like SOME VIAL X in the series to be measured by SOME TIME, then use this equation:
+
+int machine_homing_s = 40; //in s
+int calibration_s = 136;
+int reading_s = 70;
+int ph_convergence_s = 60; //Just assume it's a minute
+
+START_TIME = SOME_TIME - (homing + calibration + num_vials/2 * (reading_times + convergence_time))
+           = SOME_TIME - (40sec + 136s + num_vials/2 * (70s + 60s))
+           
+
+
+*/
+
+//const int hr[tpd] = {0, 6, 12, 20};                     
+//const int mi[4] = {0, 5, 10, 30};                               
+/*********************************************************************************************/
+
+//JUST FOR TESTING!!!
+const int hr[3] = {18, 18, 19};                     
+const int mi[3] = {20, 56, 00};
+
 /*
 pH Automation Code
 RPNE Technologies
@@ -64,12 +112,12 @@ long sigthreshold = 200;                              // Threshold for consecuti
 unsigned long receiveAS;                              // Stores time where Arduino starts to listen to AS
 unsigned long timeoutthresh = 1500;                   // Milliseconds to wait for input from AS
 
-const int strLoop = 6;                                // Flag to signal master to start loop
-const int tpd = 4;                                    // Number of reading per day
-const int hr[tpd] = {15};                     // Loop run starting hours, also in military time
-const int mi[1] = {33};                               // Loop run starting minute
+const int strLoop = 6;                                // Flag to signal master to start loop                                 
 
 File dataFile;                                        // File object for SD card
+
+//track the number of vials
+int counter_vials = 0;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // setup Function
@@ -145,8 +193,16 @@ void loop(){
     tempcount = 0;
   }
   
+  if (tempcount % 10 == 1)
+  {
+    Serial.print("This is intms: ");
+    Serial.println(intms);
+    Serial.println(binin);
+    Serial.println(tempcount);
+  }
   // If binin is 001 =1, 100=4, 101=5, 110=6, or 111=7, then perform calibrations or readings
   switch (binin){
+    
     case 1: //solo for checking time
       if(checkTime() == true){
         digitalWrite(strLoop,HIGH);
@@ -155,6 +211,7 @@ void loop(){
       }
       xPos = 1;                                       // reset X & Y positions
       yPos = 1;
+      tempcount = 0;
       binin = 0;
       break;
     case 4:
@@ -182,12 +239,14 @@ void loop(){
       Serial.println("Cal 10");
       break;
     case 7:
+      Serial.println("I'm in case 7");
       pHRead(true);
       binout = 1;
       delay(calT);
       binin = 0;
       tempcount = 0;
       changePos();
+      counter_vials += 1;
       break;
   }
  
@@ -257,6 +316,7 @@ void listenAS(boolean A){
     Serial.print(sensorstring);                       // send that string to the PC's serial monitor
     Serial.print(",");
     if(A==true){
+      Serial.print("Recording data!");
       recordData(sensorstring);
     }
     Serial.print('\n');
@@ -264,23 +324,30 @@ void listenAS(boolean A){
     sensor_string_complete = false;                   // reset flag
   }
 }
-
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 boolean checkTime(){
   dt=clock.getDateTime();
-
+  Serial.print(dt.hour);
+  Serial.print("_");
+  Serial.print(dt.minute);
+  Serial.print("_");
+  Serial.println(dt.second);
   //checks the times always
-  for(int i=0; i < tpd; i++){
-    if(dt.hour == hr[i]){
-      if(dt.minute >= mi[0] && dt.minute < (mi[0] + 5)){
-       Serial.println("It is time, in CheckTime()"); //make this great than or equal to catch case when time passed but arduino was too sleepy
-        return true;
-      }
-      
-      return false;
+  for(int i=0; i < tpd; i++) {
+    Serial.println("here's what we are looking for");
+    Serial.print(hr[i]);
+    Serial.print(" : ");
+    Serial.print(mi[i]);
+    //(dt.hour == hr[i] && dt.minute == mi[i]){
+      if(dt.hour == hr[i] && (dt.minute >= mi[i] && dt.minute < (mi[i] + 1))){
+          Serial.println("IN MINUTE LOOP ****************************************************************************************");
+          return true;
     }
-    return false;  
   }
-}
+    
+  return false;
+  }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // recordData function
@@ -369,6 +436,11 @@ void createFileName(){                                // Create a fileName for t
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void changePos(){
+  if (counter_vials >= numVials){
+    xPos = 3;
+    yPos = 0;
+    counter_vials = 0;
+  }
   if (xPos == nX){                          
     xPos = 1;
     if (yPos == nY){
@@ -390,4 +462,23 @@ void recPos(){
   dataFile.print(", ");
   dataFile.println(yPos);
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//Calculate middle expected time for trials, and match time to that
+/*
+void set_start_times(){
+  for (int i = 0; i < tpd; i++) {
+    //the half-amount of time = intiation times + variable reading time
+    // = homing + calibration + num_vials/2 * (reading_times + convergence_time)
+    int seconds_before_measure = machine_homing_s + calib_s + (int(numVials/2) * (reading_s + ph_convergence_s));
+    int minutes_before = seconds_before_measure/60;
+    if(minutes_before >= 60){
+      int hours_before = minutes_before/60;
+    }
+    
+  }
+  
+} */
 
