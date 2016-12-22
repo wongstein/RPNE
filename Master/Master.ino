@@ -1,14 +1,27 @@
 
 
 /* USER INTERFACE **************************************************************************/
-const int numVials = 1;                           
+
+//Total number of vials to test. BE SURE TO UPDATE THIS IN SLAVE CODE TOO!!!
+const int numVials = 3;  
+
+//max number of test vials in the x direction across all rows.  
+//If you commit to a max X ,
+const int nX = 1;                                     // Number of vials in the X direction
+
+//max number of rows that your test vials occupy.  This is less important than numVials and nX
+//You can always leave it at the default 7.  This program is smart enough to stop early.
+const int nY = 7;
+                                     
+const long calibration_time = (5 * 60); //in seconds   
+const long test_time = (60); //in seconds                
 /*********************************************************************************************/
 
 
 /*
 pH Automation Code
 RPNE Technologies
-12-16-16
+12-21-16
 
 //Stuff changed/fixwd from version Auto_Loop_12_3_DG
 added simultaneous x and y homing (z homing is left to be done first for safety concerns, i.e. a probe inside a vial)
@@ -60,8 +73,7 @@ const int xyRes = 40;//(steps/mm)                     // Resolution constant val
 int X = xyRes*xDis;                                   // Number of steps between vials in X direction
 int Y = xyRes*yDis;                                   // Number of steps between vials in Y direction
 
-const int nX = 7;                                     // Number of vials in the X direction
-const int nY = 3;                                     // Number of vials in the Y direction
+
 
 int count = 0;                                        // Counter to keep track of the number of vials
 
@@ -72,7 +84,7 @@ const int spd = 250;                                  // Winding energization pa
 const int zspd = 400;                                 // Speed of z axis
 
 //const int Z = 13900;                                  // Distance that probe moves up/down upon a reading
-const int Z = 3; //TEST
+const int Z = 200; //TEST
 
 boolean shifted = false;                              // Parameter to check if x axis has been shifted
 
@@ -84,12 +96,10 @@ const int xSpg = 2; const int ySpg = 0;               // Position of sponge
 const int xCal7 = 3; const int yCal7 = 0;             // Position of calibration solution vials
 const int xCal4 = 4; const int yCal4 = 0;
 const int xCal10 = 5; const int yCal10 = 0;
-const int xStrg = 7; const int yStrg = 0;             // Position of storage solutions
+const int xStrg = 1; const int yStrg = 7;             // Position of storage solutions
 int Pos[] = {xPos, yPos};
 int startTime = 0;                                    // Keeps track of start and end times of the z-axis 'swish' loop
 int currentTime = 0;
-//long swishtime = 60000;                               // Swishes probe tip around for this many ms
-long swishtime = 1; //TEST
 
 // CONSTANTS AS PER WIRING ON BOARDS, DO NOT CHANGE
  const int xp = 2;                                    // X position pin #
@@ -140,7 +150,7 @@ void setup(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-   Serial.println("Restarted the loop");
+   Serial.println("Restarted the loop BUT UNICORNS");
    storeProbe();      // Stores probe between cycles (arg of 1 = 1 sec of storage)
    Serial.println("Done with storeProbe");
    findLimits(); 
@@ -162,9 +172,14 @@ void loop() {
 // reseting outputs and rising again. Note that if ABC = 000, there no swish occurs
 void dunkProbe(bool A,bool B,bool C){               
   moveZ(Z,zspd);
+  long swishtime = 1000; //TEST
   if (A != 0 || B !=0 || C != 0) {                    // Delay of 30 seconds while swishing up/down probe tip in solution to 'equilibrate' it faster
     startTime = millis();
     currentTime = startTime;
+    /*
+    if (A == 1 && B == 1 && C == 1) {swishtime = test_time * 1000;} //for test time in ms
+    else {swishtime = calibration_time * 1000;}; //For calibration time in ms
+    */
     while (((currentTime - startTime) <= swishtime) && ((currentTime - startTime) >= 0)) // do this loop for 30s
     {
       moveZ(-200,zspd);                               // Moves the probe up just a little
@@ -190,25 +205,12 @@ void storeProbe(){                                    // Function stores the pro
   moveTo(xStrg,yStrg);                                // length of time in seconds
   moveZ(Z,zspd);
   masterSlaveWrite(0,0,1);                            // Tells slave to track time
-  int sl_flag = 0;                    // Keeps track of input from slave
-  while(sl_flag == 0){              //waiting for time input from slave
-    SlPinRead = digitalRead(startLoop);          // Read input from slave //It is 1
-    Serial.print("this is SiPinRead: ");
-    Serial.println(SlPinRead);
-    if (SlPinRead == 1)                                     // If there is some non-zero signal from the master, enter stack
-    {
-      long int startSLin = millis();                      // Set 'start' time of signal
-      while(digitalRead(startLoop) == 1){
-        if ((millis() - startSLin > SL_THRESH) || (millis() - startSLin < 0)){      // Make sure time threshold is met for 'high' input
-          Serial.println("We've reached threshold!!");
-          sl_flag = 1;                      // Received high input from slave
-          masterSlaveWrite(0,0,0);      // Tells slave to be on standby again
-          break;
-        }
-      }
-    }
+  int sl_flag = 0;                                    // Keeps track of input from slave
+  while(digitalRead(startLoop) == 0){
+    masterSlaveWrite(0,0,1);
+    delay(1000);
   }
-  masterSlaveWrite(0,0,0);      // Tells slave to be on standby again
+  masterSlaveWrite(0,0,0);        // Tells slave to be on standby again
   moveZ(-1*Z,zspd);              // Lifts probe out of storage
 }
 
@@ -450,12 +452,6 @@ void nextSample(){                //This function/method calculates the positon 
 // length of time
 void waitForSlave(){                                
   delay(rt);
-  /*
-  delay(500);
-  while(digitalRead(A3) = 0){
-    delay(500);
-  }
-*/
 }
 
 
@@ -463,8 +459,10 @@ void waitForSlave(){
 void washProbe(){                                   //Function washes and dries probe
   moveTo(xTub,yTub);
   dunkProbe(0,0,0);
-  moveTo(xSpg,ySpg);
+  /*
+  moveTo(xSpg,ySpg);  //if there's a sponge
   dunkProbe(0,0,0);
+  */
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

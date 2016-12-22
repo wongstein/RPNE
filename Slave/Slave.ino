@@ -4,12 +4,12 @@
 
 /* USER INTERFACE **************************************************************************/
 //Total number of vials being tested this time.  Make sure you updated the master code too!
-int numVials = 1;
+int numVials = 3;
 
 //The total number of times you want to run trials in a day
-const int tpd = 4;
+const int num_trials = 4;
 
-//YOu can enter here up to four different times to check in a day.
+//You can enter here up to four different times to check in a day.
 //These times should track with the middle time of measurement, 
 //aka: if you put in midnight, then the program will make sure that the machine finishes measuring half the vials by the time inputted.
 
@@ -38,18 +38,14 @@ START_TIME = SOME_TIME - (homing + calibration + num_vials/2 * (reading_times + 
 
 */
 
-//const int hr[tpd] = {0, 6, 12, 20};                     
-//const int mi[4] = {0, 5, 10, 30};                               
+const int hr[num_trials] = {17, 17, 17, 0};                     
+const int mi[num_trials] = {30, 40, 45, 0};                              
 /*********************************************************************************************/
-
-//JUST FOR TESTING!!!
-const int hr[3] = {20, 20, 21};                     
-const int mi[3] = {50, 52, 14};
 
 /*
 pH Automation Code
 RPNE Technologies
-12-16-16
+12-21-16
 
 This is code that takes inputs on A0, A1, and A2 (MSB to LSB) and performs actions based upon these inputs.
 
@@ -112,7 +108,7 @@ long sigthreshold = 200;                              // Threshold for consecuti
 unsigned long receiveAS;                              // Stores time where Arduino starts to listen to AS
 unsigned long timeoutthresh = 1500;                   // Milliseconds to wait for input from AS
 
-const int strLoop = 6;                                // Flag to signal master to start loop                                 
+const int strLoop = 8;                                // Flag to signal master to start loop                                 
 
 File dataFile;                                        // File object for SD card
 
@@ -190,7 +186,7 @@ void loop(){
   // If binin is 001 =1, 100=4, 101=5, 110=6, or 111=7, then perform calibrations or readings
   switch (binin){
     
-    case 1: //solo for checking time
+    case 1:                                           //solo for checking time
       if(checkTime() == true){
         digitalWrite(strLoop,HIGH);
         delay(2500);
@@ -291,8 +287,8 @@ void listenAS(boolean A){
     Serial.print(sensorstring);                       // send that string to the PC's serial monitor
     Serial.print(",");
     if(A==true){
-      Serial.print("Recording data!");  //test
       recordData(sensorstring);
+      Serial.print(sensorstring);  //TEST!
     }
     Serial.print('\n');
     sensorstring = "";                                // clear the string
@@ -304,9 +300,7 @@ void listenAS(boolean A){
 boolean checkTime(){
   dt=clock.getDateTime();
   //checks the times always
-  for(int i=0; i < tpd; i++) {
-    //(dt.hour == hr[i] && dt.minute == mi[i]){
-      //if(1){
+  for(int i=0; i < num_trials; i++) {
      if( (dt.hour == hr[i])
         && (  (dt.minute >= mi[i]) 
             && (dt.minute < (mi[i] + 1))
@@ -314,9 +308,9 @@ boolean checkTime(){
          ){
           Serial.println("it's time");
           return true;
-    } else {Serial.print(" not time "); }
+    }
   }
-    
+  delay(10000); //don't need to check all the time, can wait 10 seconds
   return false;
   }
 
@@ -398,7 +392,7 @@ String createFileName(){
   if(dt.hour<10){
     this_string +="0";
   }
-  this_string += dt.hour;
+  fileName += dt.hour;
   if(dt.minute<10){
     this_string +="0";
   }
