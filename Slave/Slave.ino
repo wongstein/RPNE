@@ -1,7 +1,55 @@
+
+
+
+
+/* USER INTERFACE **************************************************************************/
+//Total number of vials being tested this time.  Make sure you updated the master code too!
+int numVials = 4;
+
+//The total number of times you want to run trials in a day
+const int num_trials = 4;
+
+//You can enter here up to four different times to check in a day.
+//These times should track with the middle time of measurement, 
+//aka: if you put in midnight, then the program will make sure that the machine finishes measuring half the vials by the time inputted.
+
+//hr is the hours of the time in military time
+//mi is the minutes and track with the array positions on hr.
+
+//For example: if you want to run a trial at midnight, then you could set hr[0] = 0, and match mi[0] = 0
+//However, if you were intending to check at midnight, and set hr[0] = 0 but mi[1] = 0 instead of mi[0],
+//then the program will not reliably measure at midnight
+
+//In this example, the times for measurement would be read as : 0:00, 6:05, 12:10,  20:30
+
+
+/*
+If you want to calculate the times based on when you would like SOME VIAL X in the series to be measured by SOME TIME, then use this equation:
+
+int machine_homing_s = 40; //in s
+int calibration_s = 136;
+int reading_s = 70;
+int ph_convergence_s = 60; //Just assume it's a minute
+
+START_TIME = SOME_TIME - (homing + calibration + num_vials/2 * (reading_times + convergence_time))
+           = SOME_TIME - (40sec + 136s + num_vials/2 * (70s + 60s))
+           
+
+
+*/
+
+const int hr[num_trials] = {20, 20, 20, 20};                     
+const int mi[num_trials] = {32, 35, 38, 53}; 
+
+//MAKE SURE this matches whatever is in the master code.
+int nX = 2;
+int nY = 7;
+/********************************************************************************************/
+
 /*
 pH Automation Code
 RPNE Technologies
-12-16-16
+12-21-16
 
 This is code that takes inputs on A0, A1, and A2 (MSB to LSB) and performs actions based upon these inputs.
 
@@ -40,9 +88,9 @@ const int chipSelect = 4;                             // ChipSelect for the SD c
 
 String inputstring = "";                              // String to hold incoming data from the PC
 String sensorstring = "";                             // String to hold the data from the Atlas Scientific product
+String fileName = "";
 boolean input_string_complete = false;                // Have we received all the data from a connected PC?
 boolean sensor_string_complete = false;               // Have we received all the data from the Atlas Scientific?
-String fileName="";                                   // Used for the naming of the date file
 
 int ms1 = 0;                                          // State of MASTER 1 PIN
 int ms2 = 0;                                          // State of MASTER 2 PIN
@@ -56,24 +104,24 @@ int intms = 0;                                        // Stores (temporary) base
 int calT = 1000;                                      // Calibration time constant - delay in
 int xPos = 1;
 int yPos = 1;
-int nX = 7;
-int nY = 7;
+
 long sigthreshold = 200;                              // Threshold for consecutive readings to be considered a solid command from master
                                                       // Threshold of 200 is ~5ms of signal based on empirical timing tests
                             
 unsigned long receiveAS;                              // Stores time where Arduino starts to listen to AS
 unsigned long timeoutthresh = 1500;                   // Milliseconds to wait for input from AS
 
-const int strLoop = 6;                                // Flag to signal master to start loop
-const int tpd = 4;                                    // Number of reading per day
-const int hr[tpd] = {15};                     // Loop run starting hours, also in military time
-const int mi[1] = {33};                               // Loop run starting minute
+const int strLoop = 8;                                // Flag to signal master to start loop                                 
 
 File dataFile;                                        // File object for SD card
 
+//track the number of vials
+int counter_vials = 0;
+boolean finished_trial = false;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // setup Function
 // Arduino runs through this function once upon startup
+
 void setup(){
   Serial.begin(9600);                                 // set baud rate for the hardware serial port_0 to 9600, debugging
   myserial.begin(9600);                               // set baud rate for the software serial port to 9600
@@ -91,10 +139,10 @@ void setup(){
 
   pinMode(strLoop,OUTPUT);                            // To send signal to master
   digitalWrite(strLoop,LOW);
-  
+  fileName = createFileName();
   initializeSD();                                     // Initializes SD card
-
-  createFileName();                                   // Determines file name and creates file if not existing
+  
+                                    // Determines file name and creates file if not existing
 
   pHRead(false);                                      // One command to clear *ER output
   myserial.print("RESPONSE,0\r");                     // Responses (like *OK) are turned OFF from Atlas Scientific
@@ -102,24 +150,18 @@ void setup(){
   myserial.print("C,0\r");                            // Continuous mode for Atlas Scientific OFF
   delay(1500);                      
   
-  pHRead(false);                        
+  pHRead(false);                  
   // To make sure the Atlas Scientific buffer is clear, we run through a 'listen' function a few times
   listenAS(false);
   listenAS(false);
   listenAS(false);
  
-  Serial.print("This is the current time for the clock: ");
-  Serial.print(dt.hour);
-  Serial.print(": ");
-  Serial.print(dt.minute);
-  Serial.print(": ");
-  Serial.println(dt.second);
  }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // loop Function
 // This is the main function that the Arduino will loop through forever after setup.
 void loop(){
- 
+  
   binout = 0;                                         // Sets signal output to master to 0
   ms1 = digitalRead(A0);                              // Reads master signal incoming on some pins
   ms2 = digitalRead(A1);
@@ -144,20 +186,29 @@ void loop(){
   else{                                               // If no signal detected, set tempcount to 0
     tempcount = 0;
   }
-  
+
+  //TEST!
+  //if (binin != 0) {Serial.print("this is binin : "); Serial.println(binin);}
+  //if (intms != 0) {Serial.print("intms is not 0: "); Serial.println(intms);}
   // If binin is 001 =1, 100=4, 101=5, 110=6, or 111=7, then perform calibrations or readings
+  
+  
   switch (binin){
-    case 1: //solo for checking time
+    case 1:                                           //solo for checking time
       if(checkTime() == true){
         digitalWrite(strLoop,HIGH);
         delay(2500);
         digitalWrite(strLoop,LOW);
-      }
+      } else { digitalWrite(strLoop,LOW); };
       xPos = 1;                                       // reset X & Y positions
       yPos = 1;
+      tempcount = 0;
       binin = 0;
+      counter_vials = 0;
+      finished_trial = false;
       break;
     case 4:
+      Serial.println("In case 4");
       pHCal7();                                       // Calibration or reading function
       binout = 1;                                     // Tells master that slave is done, and to bring master signal to 000
       delay(calT);                                    // Delay to allow time for master to bring signal to 000
@@ -166,6 +217,7 @@ void loop(){
       Serial.println("Cal 7");
       break;
     case 5:
+      Serial.println("In case 5");
       pHCal4();
       binout = 1;
       delay(calT);
@@ -173,15 +225,8 @@ void loop(){
       tempcount = 0;
       Serial.println("Cal 4");
       break;
-    case 6:
-      pHCal10();
-      binout = 1;
-      delay(calT);
-      binin = 0;
-      tempcount = 0;
-      Serial.println("Cal 10");
-      break;
     case 7:
+      Serial.println("This is case 7");
       pHRead(true);
       binout = 1;
       delay(calT);
@@ -203,11 +248,6 @@ void pHCal4(){                                        // Calibrates to 4 pH
   delay(1000);
 }
 
-void pHCal10(){                                       // Calibrates to 10 pH
-  myserial.print("Cal,high,10.00\r");
-  delay(1000);
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void serialEvent(){                                   // if the hardware serial port_0 receives a char
   inputstring = Serial.readStringUntil(13);           // read the string until we see a <CR>
@@ -220,6 +260,7 @@ void serialEvent(){                                   // if the hardware serial 
 void pHRead(boolean A){                                     
   myserial.print("R\r");                              // AS only reads when requested with R
   listenAS(A);
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -264,23 +305,24 @@ void listenAS(boolean A){
     sensor_string_complete = false;                   // reset flag
   }
 }
-
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 boolean checkTime(){
   dt=clock.getDateTime();
-
   //checks the times always
-  for(int i=0; i < tpd; i++){
-    if(dt.hour == hr[i]){
-      if(dt.minute >= mi[0] && dt.minute < (mi[0] + 5)){
-       Serial.println("It is time, in CheckTime()"); //make this great than or equal to catch case when time passed but arduino was too sleepy
-        return true;
-      }
-      
-      return false;
+  for(int i=0; i < num_trials; i++) {
+     if( (dt.hour == hr[i])
+        && (  (dt.minute >= mi[i]) 
+            && (dt.minute < (mi[i] + 1))
+            )
+         ){
+          Serial.println("it's time");
+          return true;
     }
-    return false;  
   }
-}
+  delay(10000); //don't need to check all the time, can wait 10 seconds
+  return false;
+  }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // recordData function
@@ -288,8 +330,9 @@ boolean checkTime(){
 // card was not initialized, this function will attempt to initialize the SD card.
 void recordData(String A){
   //turn to charArray for happiness
-    char temp[sizeof(fileName)];
-    fileName.toCharArray(temp, sizeof(temp));
+    char temp[13];
+    
+    fileName.toCharArray(temp, 13);
     dataFile=SD.open(temp, FILE_WRITE);
 
     if(dataFile==false){
@@ -335,52 +378,54 @@ void recTime(){                                       // function to calculate t
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initializeSD(){                                  // Initialize SD card 
-  Serial.print("Initializing SD card...");            // This function can be called to try and reinitialize the card
-  
   if (!SD.begin(chipSelect)) {                        // See if the card is present and can be initialized
-    Serial.println("Card failed, or not present");
+    Serial.println("Card failed");
     return;
   }
-  Serial.println("Card initialized.");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void createFileName(){                                // Create a fileName for the .txt file
+String createFileName(){ 
+ // Create a fileName for the .txt file
+  String this_string = "";
   dt=clock.getDateTime();
   
   if(dt.month<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.month;
+  this_string += dt.month;
   if(dt.day<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.day;
+  this_string += dt.day;
   if(dt.hour<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.hour;
+  this_string += dt.hour;
   if(dt.minute<10){
-    fileName +="0";
+    this_string +="0";
   }
-  fileName += dt.minute;
-  fileName += ".txt";
+  
+  this_string += dt.minute;
+  this_string += ".txt";
+
+  return this_string;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void changePos(){
-  if (xPos == nX){                          
-    xPos = 1;
-    if (yPos == nY){
-      yPos = 1;
-    }
-    else{
-      yPos++;
-    }
-  }
-  else{
-    xPos++;
-  }
+  counter_vials += 1;
+  
+  if (counter_vials >= numVials){
+    xPos = 3;
+    yPos = 0;
+    finished_trial = true;
+    counter_vials = 0;
+  } else if (xPos >= nX) {
+    if(finished_trial != true) {xPos = 1; yPos += 1;} //we assume that X pos is maximised first
+    else{xPos += 1;} //This is that final calibration retest, for pH 4
+    
+    } else { xPos += 1;};
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -389,5 +434,6 @@ void recPos(){
   dataFile.print(xPos);
   dataFile.print(", ");
   dataFile.println(yPos);
+  
 }
 
