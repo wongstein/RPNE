@@ -1,10 +1,35 @@
-
-
+/*
+ * SLAVE CODE
+ * 
+ * This is the slave code.  This code controls the pH measuring, data recording, and 
+ * turn-on time for the machine.  This code functions this way: when the machine is on,
+ * the slave code constantly checks for the time.  When it senses that it is the right
+ * time to take measurements (based on what you tell it in hr[] and mi[]), it'll signal
+ * to the master-code to turn everything on.  Then it waits for master to tell it when
+ * to start measuring.  Once it gets the signal, it takes one measurement (per vial) 
+ * and records:
+ * pH, time, date, x position of vial, y position of vial
+ * 
+ * At the end of a trial, it remeasures its calibration vials and records those at:
+ * (3, 0); (4, 0) coordinates
+ * 
+ * We have programed this to take only two calibration measurements.  There is capacity
+ * to do 3.  IF you would like three, email us to change the code.
+ * 
+ * Keep in mind that the times you put in the code are the times the machine BEGINS
+ * a trial.  If you would like trials, to reach mid-way at a specific time, you must
+ * calculate the start time on your own.  How to do so is explained above the code
+ * to modify start times
+ */
 
 
 /* USER INTERFACE **************************************************************************/
-//Total number of vials being tested this time.  Make sure you updated the master code too!
-int numVials = 4;
+//Total number of vials being tested per trial.  Make sure you updated the master code too!
+int numVials = 49;
+
+//The max number of vials used in the X-direction of the array being utilized.
+//MAKE SURE this matches whatever is in the master code.  It's called the same thing
+int nX = 7;
 
 //The total number of times you want to run trials in a day
 const int num_trials = 4;
@@ -27,23 +52,18 @@ const int num_trials = 4;
 If you want to calculate the times based on when you would like SOME VIAL X in the series to be measured by SOME TIME, then use this equation:
 
 int machine_homing_s = 40; //in s
-int calibration_s = 136;
+int calibration_time = THIS IS IN YOUR MASTER-CODE LOOK THERE!!! ;
 int reading_s = 70;
-int ph_convergence_s = 60; //Just assume it's a minute
+int test_time = THIS IS ALSO IN YOUR MASTER CODE!! LOOK THERE;
 
-START_TIME = SOME_TIME - (homing + calibration + num_vials/2 * (reading_times + convergence_time))
-           = SOME_TIME - (40sec + 136s + num_vials/2 * (70s + 60s))
-           
-
+START_TIME = PEAK_TIME - (homing + (calibration_time * #_calibration_vials) + num_vials/2 * (reading_times + test_time))
 
 */
 
-const int hr[num_trials] = {20, 20, 20, 20};                     
-const int mi[num_trials] = {32, 35, 38, 53}; 
+const int hr[num_trials] = {21, 22, 23, 21};                     
+const int mi[num_trials] = {3, 0, 0, 30}; 
 
-//MAKE SURE this matches whatever is in the master code.
-int nX = 2;
-int nY = 7;
+
 /********************************************************************************************/
 
 /*

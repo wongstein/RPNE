@@ -1,18 +1,27 @@
 
+/*
+ * MASTER CODE
+ * This code controls the master microcontroller (the one with the fan on it). It sends and receives from the slave
+ * microcontroller to move the motors of the machine.
+ * 
+ * Note - this code assumes vials are packed in a rectangular configuration. After homing and calibration, this code
+ * will start the 'read' at vial (1,1)
+ */
 
 /* USER INTERFACE **************************************************************************/
-
 //Total number of vials to test. BE SURE TO UPDATE THIS IN SLAVE CODE TOO!!!
 const int numVials = 4;  
 
-//max number of test vials in the x direction across all rows.  
-//If you commit to a max X , then make sure you don't skip one EVER, or if you do, you must increment numvials + 1
+// Maximum number of test vials in the x direction across all rows.  
+// Again, this assumes the vials are in a packed configuration (no skipping spaces).
 const int nX = 2;                                   
 
-//max number of rows that your test vials occupy.  This is less important than numVials and nX
-//You can always leave it at the default 7.  This program is smart enough to stop early.
+// Max number of rows that your test vials occupy.
+// You can always leave it at the default 7.  This is less important than numVials and nX, as
+// this program is smart enough to stop early subject to the number of vials numVials.
 const int nY = 7;
-                                     
+
+// Times for calibration and vial reading, in seconds. Longer times mean more accurate measurements.
 const long calibration_time = (5 * 60); //in seconds.  We started with calibration as 5 minutes  
 const long test_time = (60); //in seconds                
 /*********************************************************************************************/
@@ -73,8 +82,6 @@ const int xyRes = 40;//(steps/mm)                     // Resolution constant val
 int X = xyRes*xDis;                                   // Number of steps between vials in X direction
 int Y = xyRes*yDis;                                   // Number of steps between vials in Y direction
 
-
-
 int count = 0;                                        // Counter to keep track of the number of vials
 
 const int db = 10;                                    // Limit switch debounce constant  
@@ -83,8 +90,7 @@ const int spd = 250;                                  // Winding energization pa
                                                       // Value in microseconds, smaller values = faster motor speed
 const int zspd = 400;                                 // Speed of z axis
 
-//const int Z = 13900;                                  // Distance that probe moves up/down upon a reading
-const int Z = 200; //TEST
+const int Z = 13900;                                  // Distance that probe moves up/down upon a reading
 
 boolean shifted = false;                              // Parameter to check if x axis has been shifted
 
@@ -150,11 +156,11 @@ void setup(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-   Serial.println("Restarted the loop BUT UNICORNS");
+   Serial.println("Restarted the loop BUT puppies");
    storeProbe();      // Stores probe between cycles (arg of 1 = 1 sec of storage)
    Serial.println("Done with storeProbe");
    findLimits(); 
-   //calProbe();                                         // Calibrates probe
+   calProbe();                                         // Calibrates probe
    for(int c=0; c < numVials; c++){
      Serial.println("Now testing all the vials");
       washProbe();                                                                                                                           
@@ -172,14 +178,14 @@ void loop() {
 // reseting outputs and rising again. Note that if ABC = 000, there no swish occurs
 void dunkProbe(bool A,bool B,bool C){               
   moveZ(Z,zspd);
-  long swishtime = 1000; //TEST
+  long swishtime;
   if (A != 0 || B !=0 || C != 0) {                    // Delay of 30 seconds while swishing up/down probe tip in solution to 'equilibrate' it faster
     startTime = millis();
     currentTime = startTime;
-    /* TEST!
+
     if (A == 1 && B == 1 && C == 1) {swishtime = test_time * 1000;} //for test time in ms
     else {swishtime = calibration_time * 1000;}; //For calibration time in ms
-    */
+   
     while (((currentTime - startTime) <= swishtime) && ((currentTime - startTime) >= 0)) // do this loop for 30s
     {
       moveZ(-200,zspd);                               // Moves the probe up just a little
@@ -504,6 +510,4 @@ void test_7_4(){
  
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//Calculate average gime 
 
