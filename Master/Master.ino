@@ -22,8 +22,8 @@ const int nX = 2;
 const int nY = 7;
 
 // Times for calibration and vial reading, in seconds. Longer times mean more accurate measurements.
-const long calibration_time = (5 * 60); //in seconds.  We started with calibration as 5 minutes  
-const long test_time = (60); //in seconds                
+const long calibration_time = 5 * 60; //in seconds.  We started with calibration as 5 minutes  
+const long test_time = 60; //in seconds                
 /*********************************************************************************************/
 
 
@@ -104,8 +104,8 @@ const int xCal4 = 4; const int yCal4 = 0;
 const int xCal10 = 5; const int yCal10 = 0;
 const int xStrg = 1; const int yStrg = 7;             // Position of storage solutions
 int Pos[] = {xPos, yPos};
-int startTime = 0;                                    // Keeps track of start and end times of the z-axis 'swish' loop
-int currentTime = 0;
+long startTime = 0;                                    // Keeps track of start and end times of the z-axis 'swish' loop
+long currentTime = 0;
 
 // CONSTANTS AS PER WIRING ON BOARDS, DO NOT CHANGE
  const int xp = 2;                                    // X position pin #
@@ -156,9 +156,7 @@ void setup(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-   Serial.println("Restarted the loop BUT puppies");
    storeProbe();      // Stores probe between cycles (arg of 1 = 1 sec of storage)
-   Serial.println("Done with storeProbe");
    findLimits(); 
    calProbe();                                         // Calibrates probe
    for(int c=0; c < numVials; c++){
@@ -215,14 +213,25 @@ void storeProbe(){                                    // Function stores the pro
   moveTo(xStrg,yStrg);                                // length of time in seconds
   moveZ(Z,zspd);
   masterSlaveWrite(0,0,1);                            // Tells slave to track time
-  int sl_flag = 0;                                    // Keeps track of input from slave
-  while(digitalRead(startLoop) == 0){
-    masterSlaveWrite(0,0,1);
-    delay(1000);
+  int sl_flag = 0;                    // Keeps track of input from slave
+  while(sl_flag == 0){              //waiting for time input from slave
+    SlPinRead = digitalRead(startLoop);          // Read input from slave
+    if (SlPinRead == 1)                                     // If there is some non-zero signal from the master, enter stack
+    {
+      long int startSLin = millis();                      // Set 'start' time of signal
+      while(digitalRead(startLoop) == 1){
+        if ((millis() - startSLin > SL_THRESH) || (millis() - startSLin < 0)){      // Make sure time threshold is met for 'high' input
+          sl_flag = 1;                      // Received high input from slave
+          masterSlaveWrite(0,0,0);      // Tells slave to be on standby again
+          break;
+        }
+      }
+    }
   }
-  masterSlaveWrite(0,0,0);        // Tells slave to be on standby again
+  masterSlaveWrite(0,0,0);      // Tells slave to be on standby again
   moveZ(-1*Z,zspd);              // Lifts probe out of storage
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void moveTo(int A, int B){
