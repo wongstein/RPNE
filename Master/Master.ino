@@ -3,17 +3,17 @@
 /* USER INTERFACE **************************************************************************/
 
 //Total number of vials to test. BE SURE TO UPDATE THIS IN SLAVE CODE TOO!!!
-const int numVials = 3;  
+const int numVials = 4;  
 
 //max number of test vials in the x direction across all rows.  
-//If you commit to a max X ,
-const int nX = 1;                                     // Number of vials in the X direction
+//If you commit to a max X , then make sure you don't skip one EVER, or if you do, you must increment numvials + 1
+const int nX = 2;                                   
 
 //max number of rows that your test vials occupy.  This is less important than numVials and nX
 //You can always leave it at the default 7.  This program is smart enough to stop early.
 const int nY = 7;
                                      
-const long calibration_time = (5 * 60); //in seconds   
+const long calibration_time = (5 * 60); //in seconds.  We started with calibration as 5 minutes  
 const long test_time = (60); //in seconds                
 /*********************************************************************************************/
 
@@ -176,7 +176,7 @@ void dunkProbe(bool A,bool B,bool C){
   if (A != 0 || B !=0 || C != 0) {                    // Delay of 30 seconds while swishing up/down probe tip in solution to 'equilibrate' it faster
     startTime = millis();
     currentTime = startTime;
-    /*
+    /* TEST!
     if (A == 1 && B == 1 && C == 1) {swishtime = test_time * 1000;} //for test time in ms
     else {swishtime = calibration_time * 1000;}; //For calibration time in ms
     */
@@ -193,6 +193,10 @@ void dunkProbe(bool A,bool B,bool C){
     
   }
   //delay(1000*30);                                   // Delay to allow probe to equilibrate with surrounding media
+  Serial.print("writing to slave in dunk probe");
+  Serial.print(A);
+  Serial.print(B);
+  Serial.println(C);
   masterSlaveWrite(A,B,C);                           
   waitForSlave();                                   
   masterSlaveWrite(0,0,0);                            // Writes 0s back to line
@@ -492,7 +496,8 @@ void test_7_4(){
   washProbe();
   moveTo(xCal7,yCal7);
   dunkProbe(1,1,1);         // Cal 7 = 100 to slave
- 
+
+  delay(1000);
   washProbe();
   moveTo(xCal4,yCal4);
   dunkProbe(1,1,1);         // Cal 4 = 101
