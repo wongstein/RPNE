@@ -60,8 +60,9 @@ START_TIME = PEAK_TIME - (homing + (calibration_time * #_calibration_vials) + nu
 
 */
 
-const int hr[num_trials] = {21, 22, 23, 21};                     
-const int mi[num_trials] = {3, 0, 0, 30}; 
+//HOURS IS IN MILITARY TIME!!!!
+const int hr[num_trials] = {21, 2, 6, 10};                     
+const int mi[num_trials] = {34, 0, 0, 30}; 
 
 
 /********************************************************************************************/
